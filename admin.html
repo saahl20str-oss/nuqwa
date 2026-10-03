@@ -23,17 +23,22 @@ function form(p={}){const L=s=>(p.product_links||[]).find(l=>l.store==s)||{};con
 <label>الوصف</label><textarea id="de" rows="3">${v(p.description)}</textarea><label>الفوائد (كل فائدة في سطر)</label><textarea id="be" rows="3">${v(p.benefits)}</textarea><label>ملاحظات مهمة</label><textarea id="no" rows="2">${v(p.notes)}</textarea>
 <div class="row"><div><label>رابط العمولة في أمازون</label><input id="au" value="${v(L('amazon').url)}"></div><div><label>السعر (اختياري، فقط إذا كان مصدره موثوقًا)</label><input id="ap" value="${v(L('amazon').price)}"></div>
 <div><label>رابط العمولة في نون</label><input id="nu" value="${v(L('noon').url)}"></div><div><label>السعر (اختياري)</label><input id="np" value="${v(L('noon').price)}"></div></div>
-<label><input type="checkbox" id="dm" style="width:auto" ${p.is_demo?'checked':''}> منتج تجريبي</label><label><input type="checkbox" id="hi" style="width:auto" ${p.hidden?'checked':''}> مخفي</label><br>
+<h3 style="margin:14px 0 2px">الألوان / الخيارات (اختياري)</h3><p style="margin:0;font-size:14px;color:var(--mut)">إذا أضفت ألوانًا فتُعرض روابطها بدل الروابط الأساسية أعلاه. لكل لون عادةً رابط أمازون مختلف.</p><div id="vr"></div><button class="btn out sm" id="av" type="button">إضافة لون</button><br><label><input type="checkbox" id="dm" style="width:auto" ${p.is_demo?'checked':''}> منتج تجريبي</label><label><input type="checkbox" id="hi" style="width:auto" ${p.hidden?'checked':''}> مخفي</label><br>
 <button id="sv">حفظ</button> <button class="out btn" id="cn">إلغاء</button></div>`;
  $('#cn').onclick=()=>$('#fm').innerHTML='';
+ const vrow=(v={})=>`<div class="row vr" style="margin:6px 0"><input class="vn" placeholder="اسم اللون" value="${esc(v.n)}"><input class="vi" placeholder="رابط صورة اللون" value="${esc(v.i)}"><input class="va" placeholder="رابط أمازون" value="${esc(v.a)}"><input class="vo" placeholder="رابط نون" value="${esc(v.o)}"><button class="btn out sm vx" type="button">حذف</button></div>`;
+ const vm={};(p.product_links||[]).filter(l=>l.variant).sort((x,y)=>(x.vpos||0)-(y.vpos||0)).forEach(l=>{const o=vm[l.variant]=vm[l.variant]||{n:l.variant,i:l.variant_image||''};if(l.store==='amazon')o.a=l.url;else o.o=l.url});
+ $('#vr').innerHTML=Object.values(vm).map(vrow).join('');$('#av').onclick=()=>$('#vr').insertAdjacentHTML('beforeend',vrow());$('#vr').onclick=e=>{if(e.target.classList.contains('vx'))e.target.closest('.vr').remove()};
  $('#sv').onclick=async()=>{const row={title:$('#t').value.trim(),image_url:$('#im').value.trim()||null,category_id:$('#ct').value||null,sort:+$('#so').value||0,description:$('#de').value,benefits:$('#be').value,notes:$('#no').value,is_demo:$('#dm').checked,hidden:$('#hi').checked};
   if(!row.title)return msg('اكتب اسم المنتج.');
   const links=[['amazon',$('#au').value.trim(),$('#ap').value.trim()],['noon',$('#nu').value.trim(),$('#np').value.trim()]].filter(l=>l[1]);
-  if(links.some(l=>!/^https?:\/\//i.test(l[1])))return msg('الروابط يجب أن تبدأ بـ https://');
+  const vl=[];document.querySelectorAll('#vr .vr').forEach((r,k)=>{const n=r.querySelector('.vn').value.trim(),im=r.querySelector('.vi').value.trim()||null;[['amazon','.va'],['noon','.vo']].forEach(([s,c])=>{const u=r.querySelector(c).value.trim();if(n&&u)vl.push({store:s,url:u,variant:n,variant_image:im,vpos:k})})});
+  if(links.some(l=>!/^https?:\/\//i.test(l[1]))||vl.some(l=>!/^https?:\/\//i.test(l.url)))return msg('الروابط يجب أن تبدأ بـ https://');
   const r=p.id?await sb.from('products').update(row).eq('id',p.id).select().single():await sb.from('products').insert(row).select().single();
   if(r.error)return msg('تعذّر الحفظ: '+r.error.message);
   await sb.from('product_links').delete().eq('product_id',r.data.id);
-  if(links.length)await sb.from('product_links').insert(links.map(l=>({product_id:r.data.id,store:l[0],url:l[1],price:l[2]||null,price_date:l[2]?new Date().toISOString().slice(0,10):null})));
+  const all=[...links.map(l=>({product_id:r.data.id,store:l[0],url:l[1],price:l[2]||null,price_date:l[2]?new Date().toISOString().slice(0,10):null})),...vl.map(x=>({product_id:r.data.id,...x}))];
+  if(all.length){const q=await sb.from('product_links').insert(all);if(q.error)return msg('تعذّر حفظ الروابط: '+q.error.message)}
   load()}}
 function viewC(){$('#v').innerHTML=`<div class="panel row"><input id="cn" placeholder="اسم تصنيف جديد"><input id="cs" type="number" placeholder="الترتيب"><button id="ca">إضافة</button></div><table><tr><th>الاسم</th><th>الترتيب</th><th></th></tr>${cats.map(c=>`<tr><td><input data-n="${c.id}" value="${esc(c.name)}"></td><td><input type="number" data-o="${c.id}" value="${c.sort}"></td><td><button class="sm btn" data-s="${c.id}">حفظ</button> <button class="sm btn out" data-x="${c.id}">حذف</button></td></tr>`).join('')}</table>`;
  $('#ca').onclick=async()=>{if(!$('#cn').value.trim())return;await sb.from('categories').insert({name:$('#cn').value.trim(),sort:+$('#cs').value||0});load()};
