@@ -1,0 +1,48 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>لوحة الإدارة | نقوة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script></head><body>
+<header id="hd"></header><main class="w" id="app"></main>
+<script src="config.js"></script><script src="app.js"></script>
+<script>
+const app=$('#app');let tab='products',cats=[],prods=[];
+const msg=(t)=>{const m=document.createElement('div');m.className='msg';m.textContent=t;app.prepend(m);setTimeout(()=>m.remove(),4000)};
+async function init(){const {data:{session}}=await sb.auth.getSession();if(!session)return login();
+ const {data}=await sb.from('admins').select('user_id').maybeSingle();if(!data){await sb.auth.signOut();return login('هذا الحساب ليس مديرًا.')}load()}
+function login(e=''){app.innerHTML=`<div class="panel" style="max-width:380px;margin:40px auto"><h2>دخول المدير</h2><p>${esc(e)}</p><label>البريد</label><input id="e" type="email" autocomplete="username"><label>كلمة المرور</label><input id="p" type="password" autocomplete="current-password"><br><br><button id="go">دخول</button></div>`;
+ $('#go').onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#e').value,password:$('#p').value});error?login('بيانات الدخول غير صحيحة.'):init()}}
+async function load(){const [c,p]=await Promise.all([sb.from('categories').select('*').order('sort'),sb.from('products').select('*,product_links(*)').order('sort').order('created_at',{ascending:false})]);cats=c.data||[];prods=p.data||[];show()}
+function show(){app.innerHTML=`<div class="tabs"><button class="${tab=='products'?'gold btn':''}" data-t="products">المنتجات</button><button class="${tab=='cats'?'gold btn':''}" data-t="cats">التصنيفات</button><button class="${tab=='stats'?'gold btn':''}" data-t="stats">الإحصاءات</button><button class="out btn" id="lo" style="margin-inline-start:auto">خروج</button></div><div id="v"></div>`;
+ document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;show()});$('#lo').onclick=async()=>{await sb.auth.signOut();init()};({products:viewP,cats:viewC,stats:viewS})[tab]()}
+function viewP(){$('#v').innerHTML=`<button id="new">إضافة منتج</button><div id="fm"></div><table><tr><th>المنتج</th><th>التصنيف</th><th>الحالة</th><th></th></tr>${prods.map(p=>`<tr><td>${esc(p.title)} ${p.is_demo?'<span class="tag demo">تجريبي</span>':''}</td><td>${esc((cats.find(c=>c.id==p.category_id)||{}).name||'-')}</td><td>${p.hidden?'مخفي':'ظاهر'}</td><td><button class="sm btn" data-e="${p.id}">تعديل</button> <button class="sm btn out" data-h="${p.id}">${p.hidden?'إظهار':'إخفاء'}</button> <button class="sm btn out" data-d="${p.id}">حذف</button></td></tr>`).join('')}</table>`;
+ $('#new').onclick=()=>form();document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>form(prods.find(p=>p.id==b.dataset.e)));
+ document.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const p=prods.find(x=>x.id==b.dataset.h);await sb.from('products').update({hidden:!p.hidden}).eq('id',p.id);load()});
+ document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{if(confirm('حذف المنتج نهائيًا؟')){await sb.from('products').delete().eq('id',b.dataset.d);load()}})}
+function form(p={}){const L=s=>(p.product_links||[]).find(l=>l.store==s)||{};const v=(x)=>esc(x??'');
+ $('#fm').innerHTML=`<div class="panel"><div class="row"><div><label>اسم المنتج</label><input id="t" value="${v(p.title)}"></div><div><label>رابط الصورة (تأكد أن لديك حق استخدامها)</label><input id="im" value="${v(p.image_url)}"></div>
+<div><label>التصنيف</label><select id="ct"><option value="">بدون</option>${cats.map(c=>`<option value="${c.id}" ${c.id==p.category_id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div><div><label>الترتيب (رقم أصغر = أولًا)</label><input id="so" type="number" value="${p.sort??0}"></div></div>
+<label>الوصف</label><textarea id="de" rows="3">${v(p.description)}</textarea><label>الفوائد (كل فائدة في سطر)</label><textarea id="be" rows="3">${v(p.benefits)}</textarea><label>ملاحظات مهمة</label><textarea id="no" rows="2">${v(p.notes)}</textarea>
+<div class="row"><div><label>رابط العمولة في أمازون</label><input id="au" value="${v(L('amazon').url)}"></div><div><label>السعر (اختياري، فقط إذا كان مصدره موثوقًا)</label><input id="ap" value="${v(L('amazon').price)}"></div>
+<div><label>رابط العمولة في نون</label><input id="nu" value="${v(L('noon').url)}"></div><div><label>السعر (اختياري)</label><input id="np" value="${v(L('noon').price)}"></div></div>
+<label><input type="checkbox" id="dm" style="width:auto" ${p.is_demo?'checked':''}> منتج تجريبي</label><label><input type="checkbox" id="hi" style="width:auto" ${p.hidden?'checked':''}> مخفي</label><br>
+<button id="sv">حفظ</button> <button class="out btn" id="cn">إلغاء</button></div>`;
+ $('#cn').onclick=()=>$('#fm').innerHTML='';
+ $('#sv').onclick=async()=>{const row={title:$('#t').value.trim(),image_url:$('#im').value.trim()||null,category_id:$('#ct').value||null,sort:+$('#so').value||0,description:$('#de').value,benefits:$('#be').value,notes:$('#no').value,is_demo:$('#dm').checked,hidden:$('#hi').checked};
+  if(!row.title)return msg('اكتب اسم المنتج.');
+  const links=[['amazon',$('#au').value.trim(),$('#ap').value.trim()],['noon',$('#nu').value.trim(),$('#np').value.trim()]].filter(l=>l[1]);
+  if(links.some(l=>!/^https?:\/\//i.test(l[1])))return msg('الروابط يجب أن تبدأ بـ https://');
+  const r=p.id?await sb.from('products').update(row).eq('id',p.id).select().single():await sb.from('products').insert(row).select().single();
+  if(r.error)return msg('تعذّر الحفظ: '+r.error.message);
+  await sb.from('product_links').delete().eq('product_id',r.data.id);
+  if(links.length)await sb.from('product_links').insert(links.map(l=>({product_id:r.data.id,store:l[0],url:l[1],price:l[2]||null,price_date:l[2]?new Date().toISOString().slice(0,10):null})));
+  load()}}
+function viewC(){$('#v').innerHTML=`<div class="panel row"><input id="cn" placeholder="اسم تصنيف جديد"><input id="cs" type="number" placeholder="الترتيب"><button id="ca">إضافة</button></div><table><tr><th>الاسم</th><th>الترتيب</th><th></th></tr>${cats.map(c=>`<tr><td><input data-n="${c.id}" value="${esc(c.name)}"></td><td><input type="number" data-o="${c.id}" value="${c.sort}"></td><td><button class="sm btn" data-s="${c.id}">حفظ</button> <button class="sm btn out" data-x="${c.id}">حذف</button></td></tr>`).join('')}</table>`;
+ $('#ca').onclick=async()=>{if(!$('#cn').value.trim())return;await sb.from('categories').insert({name:$('#cn').value.trim(),sort:+$('#cs').value||0});load()};
+ document.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{const i=b.dataset.s;await sb.from('categories').update({name:$(`[data-n="${i}"]`).value,sort:+$(`[data-o="${i}"]`).value||0}).eq('id',i);load()});
+ document.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('حذف التصنيف؟ ستبقى منتجاته بدون تصنيف.')){await sb.from('categories').delete().eq('id',b.dataset.x);load()}})}
+async function viewS(){$('#v').innerHTML='جارٍ التحميل...';const [c,v]=await Promise.all([sb.from('clicks').select('product_id,store,created_at'),sb.from('visits').select('created_at')]);
+ const wk=Date.now()-7*864e5,vs=v.data||[],cl=c.data||[];const by={};cl.forEach(x=>{const k=x.product_id+x.store;by[k]=by[k]||{p:x.product_id,s:x.store,n:0};by[k].n++});
+ $('#v').innerHTML=`<div class="row"><div class="panel">الزيارات الكلية<h2>${vs.length}</h2></div><div class="panel">زيارات آخر 7 أيام<h2>${vs.filter(x=>new Date(x.created_at)>wk).length}</h2></div><div class="panel">النقرات على روابط المتاجر<h2>${cl.length}</h2></div></div>
+<div class="msg">هذه الأرقام نقرات وزيارات فقط. المبيعات والعمولات المؤكدة تظهر في تقارير برنامج أمازون للشركاء ونون، وتحتاج ربطًا رسميًا بها.</div>
+<table><tr><th>المنتج</th><th>المتجر</th><th>النقرات</th></tr>${Object.values(by).sort((a,b)=>b.n-a.n).map(x=>`<tr><td>${esc((prods.find(p=>p.id==x.p)||{title:'(محذوف)'}).title)}</td><td>${STORE[x.s]||''}</td><td>${x.n}</td></tr>`).join('')||'<tr><td colspan=3>لا نقرات بعد.</td></tr>'}</table>`}
+init();
+</script></body></html>
