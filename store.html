@@ -14,7 +14,7 @@ const priceTxt=l=>l.price?`${esc(l.price)}${l.price_date?' (بتاريخ '+esc(l
 function card(p){const on=favs.includes(p.id);return `<article class="card"><button class="fav ${on?'on':''}" data-f="${p.id}" aria-pressed="${on}">${on?'في المفضلة':'أضف للمفضلة'}</button>
 <a href="#/p/${p.id}" class="img">${p.image_url?`<img src="${esc(safeUrl(p.image_url))}" alt="${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer">`:'بدون صورة'}</a>
 <div class="b">${p.is_demo?'<span class="tag demo">منتج تجريبي</span>':''}<h3><a href="#/p/${p.id}" style="text-decoration:none">${esc(p.title)}</a></h3>
-<div>${p.product_links.map(l=>`<span class="tag">${STORE[l.store]}</span> `).join('')}</div><a class="btn out sm" href="#/p/${p.id}">التفاصيل</a></div></article>`}
+<div>${[...new Set(p.product_links.map(l=>l.store))].map(x=>`<span class="tag">${STORE[x]}</span> `).join('')}</div><a class="btn out sm" href="#/p/${p.id}">التفاصيل</a></div></article>`}
 function home(){let list=prods.filter(p=>(!f.cat||p.category_id===f.cat)&&(!f.store||p.product_links.some(l=>l.store===f.store))&&(!f.fav||favs.includes(p.id))&&(!f.q||(p.title+' '+(p.description||'')).includes(f.q)));
  app.innerHTML=`<h1 class="ph">المنتجات المختارة</h1><p class="ps">اختر المنتج، ثم انتقل إلى أمازون أو نون لإتمام الشراء.</p><div class="bar"><input id="q" type="search" placeholder="ابحث عن منتج" value="${esc(f.q)}"><select id="st"><option value="">كل المتاجر</option><option value="amazon" ${f.store=='amazon'?'selected':''}>أمازون</option><option value="noon" ${f.store=='noon'?'selected':''}>نون</option></select>
 <button id="fv" class="${f.fav?'gold btn':''}">المفضلة (${favs.length})</button></div>
@@ -26,12 +26,16 @@ function home(){let list=prods.filter(p=>(!f.cat||p.category_id===f.cat)&&(!f.st
 function bindFav(){document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const id=b.dataset.f;favs=favs.includes(id)?favs.filter(x=>x!==id):[...favs,id];saveFav();route()})}
 function detail(id){const p=prods.find(x=>x.id===id);if(!p){app.innerHTML='<p class="empty">المنتج غير موجود. <a href="#/">العودة</a></p>';return}
  const li=t=>(t||'').split('\n').filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join('');
- app.innerHTML=`<p><a href="#/">&larr; كل المنتجات</a></p><div class="det"><div class="img" style="border-radius:6px">${p.image_url?`<img src="${esc(safeUrl(p.image_url))}" alt="${esc(p.title)}" referrerpolicy="no-referrer">`:'بدون صورة'}</div>
-<div>${p.is_demo?'<span class="tag demo">منتج تجريبي</span>':''}<h1>${esc(p.title)}</h1><p>${esc(p.description)}</p>
+ const vs=[];p.product_links.filter(l=>l.variant).sort((a,b)=>(a.vpos||0)-(b.vpos||0)).forEach(l=>{if(!vs.includes(l.variant))vs.push(l.variant)});let cur=vs[0]||null;
+ const img=()=>{const l=cur&&p.product_links.find(x=>x.variant===cur&&x.variant_image);const u=(l&&l.variant_image)||p.image_url;return u?`<img src="${esc(safeUrl(u))}" alt="${esc(p.title)}" referrerpolicy="no-referrer">`:'بدون صورة'};
+ const st=()=>p.product_links.filter(l=>vs.length?l.variant===cur:!l.variant).map(l=>`<div><a class="btn gold" style="display:block" target="_blank" rel="sponsored nofollow noopener" href="${esc(safeUrl(l.url))}" data-s="${l.store}">شاهد المنتج في ${STORE[l.store]}</a><div class="price">${priceTxt(l)}</div></div>`).join('');
+ const paint=()=>{$('#di').innerHTML=img();$('#ds').innerHTML=st();document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===cur))};
+ app.innerHTML=`<p><a href="#/">&larr; كل المنتجات</a></p><div class="det"><div class="img" id="di"></div><div>${p.is_demo?'<span class="tag demo">منتج تجريبي</span>':''}<h1>${esc(p.title)}</h1><p>${esc(p.description)}</p>
+${vs.length?`<div class="chips" style="background:none;padding:0;margin:10px 0"><strong style="align-self:center">الخيارات:</strong>${vs.map(v=>`<button class="chip" style="border:1px solid var(--gd)" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>`:''}
 ${p.benefits?`<h3>الفوائد</h3><ul>${li(p.benefits)}</ul>`:''}${p.notes?`<div class="box"><strong>ملاحظات مهمة:</strong><br>${esc(p.notes)}</div>`:''}
-<div class="stores">${p.product_links.map(l=>`<div><a class="btn gold" style="display:block" target="_blank" rel="sponsored nofollow noopener" href="${esc(safeUrl(l.url))}" data-s="${l.store}">شاهد المنتج في ${STORE[l.store]}</a><div class="price">${priceTxt(l)}</div></div>`).join('')}</div>
-<p class="price">قد نحصل على عمولة عند الشراء عبر هذه الروابط. الأسعار والتوفر يحددها المتجر وقد تتغير.</p><button class="fav ${favs.includes(p.id)?'on':''}" style="position:static" data-f="${p.id}">${favs.includes(p.id)?'في المفضلة':'أضف للمفضلة'}</button></div></div>`;
- document.querySelectorAll('[data-s]').forEach(a=>a.addEventListener('click',()=>{sb.from('clicks').insert({product_id:id,store:a.dataset.s}).then(()=>{})}));bindFav()}
+<div class="stores" id="ds"></div><p class="price">قد نحصل على عمولة عند الشراء عبر هذه الروابط. الأسعار والتوفر يحددها المتجر وقد تتغير.</p><button class="fav ${favs.includes(p.id)?'on':''}" style="position:static" data-f="${p.id}">${favs.includes(p.id)?'في المفضلة':'أضف للمفضلة'}</button></div></div>`;
+ paint();$('#ds').addEventListener('click',e=>{const a=e.target.closest('[data-s]');if(a)sb.from('clicks').insert({product_id:id,store:a.dataset.s,variant:cur}).then(()=>{})});
+ document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{cur=b.dataset.v;paint()});bindFav()}
 function route(){const m=location.hash.match(/^#\/p\/(.+)$/);m?detail(m[1]):home();if(m)scrollTo(0,0)}
 (async()=>{app.innerHTML='<p class="empty">جارٍ التحميل...</p>';
  const [c,p]=await Promise.all([sb.from('categories').select('*').order('sort'),sb.from('products').select('*,product_links(*)').eq('hidden',false).order('sort').order('created_at',{ascending:false})]);
