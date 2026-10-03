@@ -1,6 +1,6 @@
 <!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>نقوة | منتجات مختارة من أمازون ونون</title><meta name="description" content="منتجات مختارة بعناية من أمازون الإمارات ونون، مع روابط مباشرة للشراء من المتجر.">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script></head><body>
 <header id="hd"></header>
 <main class="w" id="app"></main><footer id="ft"></footer>
@@ -16,8 +16,7 @@ function card(p){const on=favs.includes(p.id);return `<article class="card"><but
 <div class="b">${p.is_demo?'<span class="tag demo">منتج تجريبي</span>':''}<h3><a href="#/p/${p.id}" style="text-decoration:none">${esc(p.title)}</a></h3>
 <div>${p.product_links.map(l=>`<span class="tag">${STORE[l.store]}</span> `).join('')}</div><a class="btn out sm" href="#/p/${p.id}">التفاصيل</a></div></article>`}
 function home(){let list=prods.filter(p=>(!f.cat||p.category_id===f.cat)&&(!f.store||p.product_links.some(l=>l.store===f.store))&&(!f.fav||favs.includes(p.id))&&(!f.q||(p.title+' '+(p.description||'')).includes(f.q)));
- app.innerHTML=`<section class="hero"><h1>اختيارات تستحق وقتك</h1><p>نختار المنتجات من أمازون الإمارات ونون، وننقلك مباشرة إلى المتجر لإتمام الشراء. لا نبيع ولا نشحن، ولا نكتب تقييمات لم نجرّبها.</p></section>
-<div class="bar"><input id="q" type="search" placeholder="ابحث عن منتج" value="${esc(f.q)}"><select id="st"><option value="">كل المتاجر</option><option value="amazon" ${f.store=='amazon'?'selected':''}>أمازون</option><option value="noon" ${f.store=='noon'?'selected':''}>نون</option></select>
+ app.innerHTML=`<section class="hero"><h1>اختيارات تستحق وقتك</h1><p>نختار المنتجات من أمازون الإمارات ونون، وننقلك مباشرة إلى المتجر لإتمام الشراء. لا نبيع ولا نشحن، ولا نكتب تقييمات لم نجرّبها.</p><div class="facts"><div><b>اختيار يدوي</b>نضيف كل منتج بأنفسنا مع وصفه وملاحظاته.</div><div><b>انتقال مباشر</b>زر المنتج يفتح صفحته لدى أمازون أو نون.</div><div><b>الشراء لدى المتجر</b>الدفع والتوصيل والإرجاع حسب سياسة المتجر.</div></div></section><div class="bar"><input id="q" type="search" placeholder="ابحث عن منتج" value="${esc(f.q)}"><select id="st"><option value="">كل المتاجر</option><option value="amazon" ${f.store=='amazon'?'selected':''}>أمازون</option><option value="noon" ${f.store=='noon'?'selected':''}>نون</option></select>
 <button id="fv" class="${f.fav?'gold btn':''}">المفضلة (${favs.length})</button></div>
 <div class="chips"><button class="chip ${!f.cat?'on':''}" data-c="">الكل</button>${cats.map(c=>`<button class="chip ${f.cat===c.id?'on':''}" data-c="${c.id}">${esc(c.name)}</button>`).join('')}</div>
 <div class="grid">${list.length?list.map(card).join(''):'<p class="empty">لا توجد منتجات مطابقة.</p>'}</div>`;
