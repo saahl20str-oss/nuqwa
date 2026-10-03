@@ -1,0 +1,40 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نقوة | منتجات مختارة من أمازون ونون</title><meta name="description" content="منتجات مختارة بعناية من أمازون الإمارات ونون، مع روابط مباشرة للشراء من المتجر.">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script></head><body>
+<header id="hd"></header>
+<main class="w" id="app"></main><footer id="ft"></footer>
+<script src="config.js"></script><script src="app.js"></script>
+<script>
+let cats=[],prods=[],f={q:'',cat:'',store:'',fav:false};
+let favs=[];try{favs=JSON.parse(localStorage.getItem('nq_fav')||'[]')}catch(e){}
+const saveFav=()=>{try{localStorage.setItem('nq_fav',JSON.stringify(favs))}catch(e){}};
+const app=$('#app');
+const priceTxt=l=>l.price?`${esc(l.price)}${l.price_date?' (بتاريخ '+esc(l.price_date)+')':''}`:'تحقق من السعر لدى المتجر';
+function card(p){const on=favs.includes(p.id);return `<article class="card"><button class="fav ${on?'on':''}" data-f="${p.id}" aria-pressed="${on}">${on?'في المفضلة':'أضف للمفضلة'}</button>
+<a href="#/p/${p.id}" class="img">${p.image_url?`<img src="${esc(safeUrl(p.image_url))}" alt="${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer">`:'بدون صورة'}</a>
+<div class="b">${p.is_demo?'<span class="tag demo">منتج تجريبي</span>':''}<h3><a href="#/p/${p.id}" style="text-decoration:none">${esc(p.title)}</a></h3>
+<div>${p.product_links.map(l=>`<span class="tag">${STORE[l.store]}</span> `).join('')}</div><a class="btn out sm" href="#/p/${p.id}">التفاصيل</a></div></article>`}
+function home(){let list=prods.filter(p=>(!f.cat||p.category_id===f.cat)&&(!f.store||p.product_links.some(l=>l.store===f.store))&&(!f.fav||favs.includes(p.id))&&(!f.q||(p.title+' '+(p.description||'')).includes(f.q)));
+ app.innerHTML=`<section class="hero"><h1>اختيارات تستحق وقتك</h1><p>نختار المنتجات من أمازون الإمارات ونون، وننقلك مباشرة إلى المتجر لإتمام الشراء. لا نبيع ولا نشحن، ولا نكتب تقييمات لم نجرّبها.</p><div class="facts"><div><b>اختيار يدوي</b>نضيف كل منتج بأنفسنا مع وصفه وملاحظاته.</div><div><b>انتقال مباشر</b>زر المنتج يفتح صفحته لدى أمازون أو نون.</div><div><b>الشراء لدى المتجر</b>الدفع والتوصيل والإرجاع حسب سياسة المتجر.</div></div></section><div class="bar"><input id="q" type="search" placeholder="ابحث عن منتج" value="${esc(f.q)}"><select id="st"><option value="">كل المتاجر</option><option value="amazon" ${f.store=='amazon'?'selected':''}>أمازون</option><option value="noon" ${f.store=='noon'?'selected':''}>نون</option></select>
+<button id="fv" class="${f.fav?'gold btn':''}">المفضلة (${favs.length})</button></div>
+<div class="chips"><button class="chip ${!f.cat?'on':''}" data-c="">الكل</button>${cats.map(c=>`<button class="chip ${f.cat===c.id?'on':''}" data-c="${c.id}">${esc(c.name)}</button>`).join('')}</div>
+<div class="grid">${list.length?list.map(card).join(''):'<p class="empty">لا توجد منتجات مطابقة.</p>'}</div>`;
+ const q=$('#q');q.oninput=()=>{f.q=q.value;const s=q.selectionStart;home();const n=$('#q');n.focus();n.setSelectionRange(s,s)};
+ $('#st').onchange=e=>{f.store=e.target.value;home()};$('#fv').onclick=()=>{f.fav=!f.fav;home()};
+ document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{f.cat=b.dataset.c;home()});bindFav()}
+function bindFav(){document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const id=b.dataset.f;favs=favs.includes(id)?favs.filter(x=>x!==id):[...favs,id];saveFav();route()})}
+function detail(id){const p=prods.find(x=>x.id===id);if(!p){app.innerHTML='<p class="empty">المنتج غير موجود. <a href="#/">العودة</a></p>';return}
+ const li=t=>(t||'').split('\n').filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join('');
+ app.innerHTML=`<p><a href="#/">&larr; كل المنتجات</a></p><div class="det"><div class="img" style="border-radius:6px">${p.image_url?`<img src="${esc(safeUrl(p.image_url))}" alt="${esc(p.title)}" referrerpolicy="no-referrer">`:'بدون صورة'}</div>
+<div>${p.is_demo?'<span class="tag demo">منتج تجريبي</span>':''}<h1>${esc(p.title)}</h1><p>${esc(p.description)}</p>
+${p.benefits?`<h3>الفوائد</h3><ul>${li(p.benefits)}</ul>`:''}${p.notes?`<div class="box"><strong>ملاحظات مهمة:</strong><br>${esc(p.notes)}</div>`:''}
+<div class="stores">${p.product_links.map(l=>`<div><a class="btn gold" style="display:block" target="_blank" rel="sponsored nofollow noopener" href="${esc(safeUrl(l.url))}" data-s="${l.store}">شاهد المنتج في ${STORE[l.store]}</a><div class="price">${priceTxt(l)}</div></div>`).join('')}</div>
+<p class="price">قد نحصل على عمولة عند الشراء عبر هذه الروابط. الأسعار والتوفر يحددها المتجر وقد تتغير.</p><button class="fav ${favs.includes(p.id)?'on':''}" style="position:static" data-f="${p.id}">${favs.includes(p.id)?'في المفضلة':'أضف للمفضلة'}</button></div></div>`;
+ document.querySelectorAll('[data-s]').forEach(a=>a.addEventListener('click',()=>{sb.from('clicks').insert({product_id:id,store:a.dataset.s}).then(()=>{})}));bindFav()}
+function route(){const m=location.hash.match(/^#\/p\/(.+)$/);m?detail(m[1]):home();if(m)scrollTo(0,0)}
+(async()=>{app.innerHTML='<p class="empty">جارٍ التحميل...</p>';
+ const [c,p]=await Promise.all([sb.from('categories').select('*').order('sort'),sb.from('products').select('*,product_links(*)').eq('hidden',false).order('sort').order('created_at',{ascending:false})]);
+ if(c.error||p.error){app.innerHTML='<p class="empty">تعذّر تحميل البيانات. تأكد من إعداد config.js وتشغيل supabase.sql.</p>';return}
+ cats=c.data;prods=p.data;route();addEventListener('hashchange',route)})();
+</script></body></html>
